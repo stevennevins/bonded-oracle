@@ -10,7 +10,8 @@ contract BondedOracle {
     error BondTooLow();
     error InvalidExpiry();
     error InvalidAnswerer();
-    error QuestionNotFinalized();
+    error AnswerNotFinalized();
+    error AnswerAlreadyFinalized();
 
     struct Question {
         uint256 openingTime;
@@ -99,6 +100,11 @@ contract BondedOracle {
         if (question.contentHash == 0) {
             revert QuestionDoesNotExist();
         }
+
+        if (answer.finalizedTime != 0) {
+            revert AnswerAlreadyFinalized();
+        }
+
         if (block.timestamp < question.openingTime + question.expiry) {
             revert FinalizationDeadlineNotReached();
         }
@@ -116,7 +122,7 @@ contract BondedOracle {
         }
 
         if (answer.finalizedTime != 0) {
-            revert QuestionNotFinalized();
+            revert AnswerNotFinalized();
         }
         /// TODO: assess answer and send back bond
 

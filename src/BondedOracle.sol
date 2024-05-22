@@ -70,6 +70,7 @@ contract BondedOracle {
     }
 
     /// TODO: need to implement virtual function for calculating required bond
+    /// TODO: Add function to extend expiration if within some buffer of end
     function provideAnswer(uint256 questionId, bytes32 response) external payable {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];

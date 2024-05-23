@@ -64,7 +64,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         oracle.requestAnswer{value: 1 ether}(openingTime, expiry, minBond, question);
     }
 
-    function testCancelQuestion() public {
+    function testCancelRequest() public {
         uint32 openingTime = uint32(block.timestamp);
         uint32 expiry = 30 days;
         uint256 minBond = 1 ether;
@@ -77,13 +77,13 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             question
         );
 
-        oracle.cancelQuestion(questionId);
+        oracle.cancelRequest(questionId);
 
         (, , , , uint256 bounty, ) = oracle.questions(questionId);
         assertEq(bounty, 0);
     }
 
-    function testCancelQuestionWithAnswer() public {
+    function testCancelRequestWithAnswer() public {
         uint32 openingTime = uint32(block.timestamp);
         uint32 expiry = 30 days;
         uint256 minBond = 1 ether;
@@ -102,10 +102,10 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         oracle.provideAnswer{value: 2 ether}(questionId, response);
 
         vm.expectRevert(NotCancellable.selector);
-        oracle.cancelQuestion(questionId);
+        oracle.cancelRequest(questionId);
     }
 
-    function testCancelQuestionAlreadyFinalized() public {
+    function testCancelRequestAlreadyFinalized() public {
         uint32 openingTime = uint32(block.timestamp);
         uint32 expiry = 30 days;
         uint256 minBond = 1 ether;
@@ -127,14 +127,14 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         oracle.finalizeAnswer(questionId);
 
         vm.expectRevert(NotCancellable.selector);
-        oracle.cancelQuestion(questionId);
+        oracle.cancelRequest(questionId);
     }
 
-    function testCancelQuestionNonExistent() public {
+    function testCancelRequestNonExistent() public {
         uint256 nonExistentQuestionId = 9999;
 
         vm.expectRevert(abi.encodeWithSignature("QuestionDoesNotExist()"));
-        oracle.cancelQuestion(nonExistentQuestionId);
+        oracle.cancelRequest(nonExistentQuestionId);
     }
 
     function testProvideAnswer() public {
@@ -432,7 +432,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         oracle.withdrawBounty(questionId);
     }
 
-    function testCancelQuestionCannotBeCalledTwice() public {
+    function testCancelRequestCannotBeCalledTwice() public {
         uint32 openingTime = uint32(block.timestamp);
         uint32 expiry = 30 days;
         uint256 minBond = 1 ether;
@@ -445,10 +445,10 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             question
         );
 
-        oracle.cancelQuestion(questionId);
+        oracle.cancelRequest(questionId);
 
         vm.expectRevert(NotCancellable.selector);
-        oracle.cancelQuestion(questionId);
+        oracle.cancelRequest(questionId);
     }
 
     function testWithdrawBountyCannotBeCalledTwice() public {

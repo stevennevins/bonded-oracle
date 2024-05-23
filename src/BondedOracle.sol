@@ -46,7 +46,7 @@ contract BondedOracle is IBondedOracle {
     }
 
     /// @inheritdoc IBondedOracle
-    function cancelQuestion(uint256 questionId) external {
+    function cancelRequest(uint256 questionId) external {
         Answer storage answer = answers[questionId];
         Question storage question = questions[questionId];
         if (questionId >= nextQuestionId) {

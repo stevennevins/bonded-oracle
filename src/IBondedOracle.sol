@@ -53,7 +53,7 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
         string memory question
     ) external payable returns (uint256);
 
-    function cancelQuestion(uint256 questionId) external;
+    function cancelRequest(uint256 questionId) external;
 
     function provideAnswer(uint256 questionId, bytes32 response) external payable;
 

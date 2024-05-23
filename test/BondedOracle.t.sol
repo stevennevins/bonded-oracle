@@ -14,13 +14,13 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         oracle = new BondedOracle();
     }
 
-    function testPostQuestion() public {
+    function testRequestAnswer() public {
         uint32 openingTime = uint32(block.timestamp + 1 days);
         uint32 expiry = 30 days;
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -44,24 +44,24 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         assertEq(storedMinBond, minBond);
     }
 
-    function testPostQuestionInvalidExpiryZero() public {
+    function testRequestAnswerInvalidExpiryZero() public {
         uint32 openingTime = uint32(block.timestamp + 1 days);
         uint32 expiry = 0;
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
         vm.expectRevert(InvalidExpiry.selector);
-        oracle.postQuestion{value: 1 ether}(openingTime, expiry, minBond, question);
+        oracle.requestAnswer{value: 1 ether}(openingTime, expiry, minBond, question);
     }
 
-    function testPostQuestionInvalidExpiryTooLong() public {
+    function testRequestAnswerInvalidExpiryTooLong() public {
         uint32 openingTime = uint32(block.timestamp + 1 days);
         uint32 expiry = 366 days;
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
         vm.expectRevert(InvalidExpiry.selector);
-        oracle.postQuestion{value: 1 ether}(openingTime, expiry, minBond, question);
+        oracle.requestAnswer{value: 1 ether}(openingTime, expiry, minBond, question);
     }
 
     function testCancelQuestion() public {
@@ -70,7 +70,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -89,7 +89,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -111,7 +111,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -143,7 +143,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -176,7 +176,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -196,7 +196,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -217,7 +217,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -237,7 +237,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -266,7 +266,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -304,7 +304,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -331,7 +331,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -354,7 +354,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -386,7 +386,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -410,7 +410,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -438,7 +438,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -457,7 +457,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -488,7 +488,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -515,7 +515,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -559,7 +559,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -598,7 +598,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -625,7 +625,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,
@@ -655,7 +655,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         uint256 minBond = 1 ether;
         string memory question = "What is the capital of France?";
 
-        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
             openingTime,
             expiry,
             minBond,

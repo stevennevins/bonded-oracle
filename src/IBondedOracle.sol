@@ -46,7 +46,7 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
 
     function bonds(uint256 questionId, address claimer) external view returns (uint256);
 
-    function postQuestion(
+    function requestAnswer(
         uint32 openingTime,
         uint32 expiry,
         uint256 minBond,

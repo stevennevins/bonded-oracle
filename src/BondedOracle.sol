@@ -18,7 +18,7 @@ contract BondedOracle is IBondedOracle {
     mapping(uint256 => mapping(address => uint256)) public bonds;
 
     /// @inheritdoc IBondedOracle
-    function postQuestion(
+    function requestAnswer(
         uint32 openingTime,
         uint32 expiry,
         uint256 minBond,
@@ -132,7 +132,6 @@ contract BondedOracle is IBondedOracle {
     }
 
     ///  TODO: need to also add a fee for bonding an answer
-
     /// @inheritdoc IBondedOracle
     function reclaimBond(
         uint256 questionId,

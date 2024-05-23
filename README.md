@@ -1,7 +1,5 @@
 ## BondedOracle
 
-## Overview of BondedOracle.sol
-
 The `BondedOracle` contract is a decentralized oracle system that leverages economic incentives to ensure the reliability and security of the answers provided. The contract operates on principles of game theory to align the interests of participants with the goal of providing accurate and trustworthy information.
 
 ### Economic Game Theory
@@ -26,10 +24,7 @@ The `BondedOracle` contract is a decentralized oracle system that leverages econ
 1. **Prediction Markets**:
    - Users can request answers to questions about future events, such as election outcomes or sports results. The economic incentives ensure that participants provide accurate predictions.
 
-2. **Data Verification**:
-   - The system can be used to verify the accuracy of data, such as the authenticity of documents or the validity of transactions. The bond mechanism ensures that only reliable data is submitted.
-
-3. **Dispute Resolution**:
+2. **Dispute Resolution**:
    - Community-driven resolution of disputes can be facilitated by the oracle. Users can request answers to questions related to the dispute, and the economic incentives ensure that the community provides fair and accurate resolutions.
 
 ### Conclusion

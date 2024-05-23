@@ -2,33 +2,9 @@
 
 pragma solidity ^0.8.20;
 
-contract BondedOracle {
-    error QuestionAlreadyExists();
-    error QuestionDoesNotExist();
-    error FinalizationDeadlineNotReached();
-    error OpeningTimeNotReached();
-    error BondTooLow();
-    error InvalidExpiry();
-    error InvalidAnswerer();
-    error AnswerNotFinalized();
-    error AnswerAlreadyFinalized();
+import {IBondedOracle} from "./IBondedOracle.sol";
 
-    struct Question {
-        uint256 openingTime;
-        address asker;
-        bytes32 contentHash;
-        uint256 expiry;
-        uint256 bounty;
-        uint256 minBond;
-    }
-
-    struct Answer {
-        bytes32 response;
-        address responder;
-        uint256 finalizedTime;
-        bytes32 historyHash;
-    }
-
+contract BondedOracle is IBondedOracle {
     uint256 public nextQuestionId;
     mapping(uint256 => Question) public questions;
     mapping(uint256 => Answer) public answers;
@@ -47,10 +23,6 @@ contract BondedOracle {
         bytes32 contentHash = keccak256(bytes(question));
         uint256 questionId = nextQuestionId;
 
-        if (questions[questionId].contentHash != 0) {
-            revert QuestionAlreadyExists();
-        }
-
         questions[questionId] = Question({
             openingTime: openingTime,
             asker: msg.sender,
@@ -66,11 +38,22 @@ contract BondedOracle {
     }
 
     function cancelQuestion(uint256 questionId) external {
-        /// TODO: Decide on the criteria to cancel a question
+        Answer storage answer = answers[questionId];
+        Question storage question = questions[questionId];
+        if (questionId >= nextQuestionId) {
+            revert QuestionDoesNotExist();
+        }
+        if (answer.historyHash != bytes32(0) || answer.finalizedTime != 0) {
+            revert NotCancellable();
+        }
+        if (question.asker != msg.sender) {
+            revert NotAuthorized();
+        }
+        answer.finalizedTime = block.timestamp;
+        delete question.bounty;
+        payable(question.asker).transfer(question.bounty);
     }
 
-    /// TODO: need to implement virtual function for calculating required bond
-    /// TODO: Add function to extend expiration if within some buffer of end
     function provideAnswer(uint256 questionId, bytes32 response) external payable {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];
@@ -78,17 +61,27 @@ contract BondedOracle {
         if (question.contentHash == 0) {
             revert QuestionDoesNotExist();
         }
+
         if (block.timestamp < question.openingTime) {
             revert OpeningTimeNotReached();
         }
-        if (msg.value <= question.minBond) {
+
+        if (block.timestamp > question.openingTime + question.expiry) {
+            revert AnswerPeriodClosed();
+        }
+
+        if (block.timestamp + 1 minutes > question.openingTime + question.expiry) {
+            question.expiry += 5 minutes; // extend if answering right before end
+        }
+
+        if (msg.value < question.minBond) {
             revert BondTooLow();
         }
 
+        question.minBond = msg.value * 2; // TODO: sqrt(value)*2)^2
+
         answer.response = response;
         answer.responder = msg.sender;
-        question.minBond = msg.value;
-
         answer.historyHash = keccak256(
             abi.encodePacked(answer.historyHash, response, msg.sender, msg.value, block.timestamp)
         );
@@ -111,6 +104,12 @@ contract BondedOracle {
         }
 
         answer.finalizedTime = block.timestamp;
+
+        if (answer.historyHash == bytes32(0)) {
+            payable(question.asker).transfer(question.bounty);
+        } else {
+            payable(answer.responder).transfer(question.bounty);
+        }
     }
 
     /// TODO: need to also add a fee for bonding an answer
@@ -125,10 +124,7 @@ contract BondedOracle {
         if (answer.finalizedTime != 0) {
             revert AnswerNotFinalized();
         }
-        /// TODO: assess answer and send back bond
-
-        /// TODO: Events need to be able to re-create chain of history of the answers so this function can re-create and assess
-        /// if the user can claim their bond back and mark them as claimed
+        /// TODO: assess answer for msg.sender, bonded value, and send back bond
     }
 
     function withdrawBounty(uint256 questionId) external {
@@ -146,6 +142,9 @@ contract BondedOracle {
         }
 
         uint256 amount = question.bounty;
+        if (question.bounty == 0) {
+            revert BountyAlreadyClaimed();
+        }
         delete question.bounty;
         payable(msg.sender).transfer(amount);
     }

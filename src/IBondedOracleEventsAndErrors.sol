@@ -15,4 +15,6 @@ interface IBondedOracleEventsAndErrors {
     error AnswerPeriodClosed();
     error NotAuthorized();
     error BountyAlreadyClaimed();
+    error NotFound();
+    error InvalidHistoryHash();
 }

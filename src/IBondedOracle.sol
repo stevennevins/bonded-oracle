@@ -44,7 +44,7 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
         view
         returns (bytes32 response, address responder, uint256 finalizedTime, bytes32 historyHash);
 
-    function claimedBonds(uint256 questionId, address claimer) external view returns (uint256);
+    function bonds(uint256 questionId, address claimer) external view returns (uint256);
 
     function postQuestion(
         uint32 openingTime,
@@ -59,7 +59,11 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
 
     function finalizeAnswer(uint256 questionId) external;
 
-    function reclaimBond(uint256 questionId) external;
+    function reclaimBond(
+        uint256 questionId,
+        bytes32 response,
+        bytes32[] memory previousHashes
+    ) external;
 
     function withdrawBounty(uint256 questionId) external;
 }

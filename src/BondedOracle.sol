@@ -15,7 +15,7 @@ contract BondedOracle is IBondedOracle {
     mapping(uint256 => Answer) public answers;
 
     /// @inheritdoc IBondedOracle
-    mapping(uint256 => mapping(address => uint256)) public claimedBonds;
+    mapping(uint256 => mapping(address => uint256)) public bonds;
 
     /// @inheritdoc IBondedOracle
     function postQuestion(
@@ -84,16 +84,24 @@ contract BondedOracle is IBondedOracle {
             question.expiry += 5 minutes; // extend if answering right before end
         }
 
-        if (msg.value < question.minBond) {
+        uint256 currentBond = bonds[questionId][msg.sender];
+        uint256 newBond = currentBond += msg.value;
+
+        if (newBond < question.minBond) {
             revert BondTooLow();
         }
 
-        question.minBond = msg.value * 2; // TODO: sqrt(value)*2)^2
+        question.minBond = newBond * 2; // TODO: sqrt(value)*2)^2
+
+        bonds[questionId][msg.sender] = newBond;
 
         answer.response = response;
         answer.responder = msg.sender;
         answer.historyHash = keccak256(
-            abi.encodePacked(answer.historyHash, response, msg.sender, msg.value, block.timestamp)
+            abi.encodePacked(
+                answer.historyHash,
+                keccak256(abi.encodePacked(response, msg.sender, newBond))
+            )
         );
     }
 
@@ -126,18 +134,47 @@ contract BondedOracle is IBondedOracle {
     ///  TODO: need to also add a fee for bonding an answer
 
     /// @inheritdoc IBondedOracle
-    function reclaimBond(uint256 questionId) external {
+    function reclaimBond(
+        uint256 questionId,
+        bytes32 response,
+        bytes32[] memory previousHashes
+    ) external {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];
+        uint256 bond = bonds[questionId][msg.sender];
 
         if (question.contentHash == 0) {
             revert QuestionDoesNotExist();
         }
 
-        if (answer.finalizedTime != 0) {
+        if (answer.finalizedTime == 0) {
             revert AnswerNotFinalized();
         }
-        /// TODO: assess answer for msg.sender, bonded value, and send back bond
+
+        // Verify the msg.sender's hashed data exists in the previousHashes list
+        bytes32 senderHash = keccak256(abi.encodePacked(response, msg.sender, bond));
+        bool found = false;
+        for (uint256 i = 0; i < previousHashes.length; i++) {
+            if (previousHashes[i] == senderHash) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            revert NotFound();
+        }
+
+        // Verify that the previousHashes compute to the current historyHash
+        bytes32 recomputedHash = recomputeHistoryHash(previousHashes);
+        if (recomputedHash != answer.historyHash) {
+            revert InvalidHistoryHash();
+        }
+
+        // Send the bond back to the msg.sender and mark their bond as claimed
+
+        delete bonds[questionId][msg.sender];
+        payable(msg.sender).transfer(bond);
     }
 
     /// @inheritdoc IBondedOracle
@@ -161,5 +198,14 @@ contract BondedOracle is IBondedOracle {
         }
         delete question.bounty;
         payable(msg.sender).transfer(amount);
+    }
+
+    function recomputeHistoryHash(bytes32[] memory previousHashes) public pure returns (bytes32) {
+        bytes32 currentHash = bytes32(0);
+        for (uint256 i = 0; i < previousHashes.length; i++) {
+            currentHash = keccak256(abi.encodePacked(currentHash, previousHashes[i]));
+        }
+
+        return currentHash;
     }
 }

@@ -508,4 +508,181 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         vm.expectRevert(abi.encodeWithSignature("AnswerAlreadyFinalized()"));
         oracle.finalizeAnswer(questionId);
     }
+
+    function testRecomputeHistoryHash() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        bytes32 response1 = keccak256("Paris");
+        bytes32 response2 = keccak256("Lyon");
+
+        vm.deal(address(0x123), 100 ether);
+        vm.prank(address(0x123));
+        oracle.provideAnswer{value: 1 ether}(questionId, response1);
+
+        vm.deal(address(0x456), 100 ether);
+        vm.prank(address(0x456));
+        oracle.provideAnswer{value: 2 ether}(questionId, response2);
+
+        bytes32[] memory previousHashes = new bytes32[](2);
+        previousHashes[0] = keccak256(
+            abi.encodePacked(response1, address(0x123), uint256(1 ether))
+        );
+        previousHashes[1] = keccak256(
+            abi.encodePacked(response2, address(0x456), uint256(2 ether))
+        );
+
+        bytes32 expectedHash = keccak256(
+            abi.encodePacked(
+                keccak256(abi.encodePacked(bytes32(0), previousHashes[0])),
+                previousHashes[1]
+            )
+        );
+
+        bytes32 recomputedHash = oracle.recomputeHistoryHash(previousHashes);
+
+        assertEq(recomputedHash, expectedHash);
+    }
+
+    function testReclaimBondSuccess() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        bytes32 response = keccak256("Paris");
+
+        vm.deal(address(0x123), 100 ether);
+        vm.prank(address(0x123));
+        oracle.provideAnswer{value: 1 ether}(questionId, response);
+
+        vm.warp(block.timestamp + expiry + 1);
+        oracle.finalizeAnswer(questionId);
+
+        bytes32[] memory previousHashes = new bytes32[](1);
+        previousHashes[0] = keccak256(abi.encodePacked(response, address(0x123), uint256(1 ether)));
+
+        vm.prank(address(0x123));
+        oracle.reclaimBond(questionId, response, previousHashes);
+    }
+
+    function testReclaimBondQuestionDoesNotExist() public {
+        bytes32 response = keccak256("Paris");
+        bytes32[] memory previousHashes = new bytes32[](1);
+        previousHashes[0] = keccak256(abi.encodePacked(response, address(0x123), uint256(1 ether)));
+
+        vm.prank(address(0x123));
+        vm.expectRevert(abi.encodeWithSignature("QuestionDoesNotExist()"));
+        oracle.reclaimBond(999, response, previousHashes);
+    }
+
+    function testReclaimBondAnswerNotFinalized() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        bytes32 response = keccak256("Paris");
+
+        vm.deal(address(0x123), 100 ether);
+        vm.prank(address(0x123));
+        oracle.provideAnswer{value: 1 ether}(questionId, response);
+
+        bytes32[] memory previousHashes = new bytes32[](1);
+        previousHashes[0] = keccak256(abi.encodePacked(response, address(0x123), uint256(1 ether)));
+
+        vm.prank(address(0x123));
+        vm.expectRevert(abi.encodeWithSignature("AnswerNotFinalized()"));
+        oracle.reclaimBond(questionId, response, previousHashes);
+    }
+
+    function testReclaimBondNotFound() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        bytes32 response = keccak256("Paris");
+
+        vm.deal(address(0x123), 100 ether);
+        vm.prank(address(0x123));
+        oracle.provideAnswer{value: 1 ether}(questionId, response);
+
+        vm.warp(block.timestamp + expiry + 1);
+        oracle.finalizeAnswer(questionId);
+
+        bytes32[] memory previousHashes = new bytes32[](1);
+        previousHashes[0] = keccak256(abi.encodePacked(response, address(0x456), uint256(1 ether)));
+
+        vm.prank(address(0x123));
+        vm.expectRevert(abi.encodeWithSignature("NotFound()"));
+        oracle.reclaimBond(questionId, response, previousHashes);
+    }
+
+    function testReclaimBondInvalidHistoryHash() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.postQuestion{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        bytes32 response = keccak256("Paris");
+
+        vm.deal(address(0x123), 100 ether);
+        vm.prank(address(0x123));
+        oracle.provideAnswer{value: 1 ether}(questionId, response);
+
+        vm.deal(address(0x124), 100 ether);
+        vm.prank(address(0x124));
+        oracle.provideAnswer{value: 2 ether}(questionId, response);
+
+        vm.warp(block.timestamp + expiry + 1);
+        oracle.finalizeAnswer(questionId);
+
+        bytes32[] memory previousHashes = new bytes32[](2);
+        previousHashes[0] = keccak256(abi.encodePacked(response, address(0x123), uint256(1 ether)));
+
+        // Modify the previousHashes to create an invalid history hash
+        previousHashes[1] = keccak256(abi.encodePacked(response, address(0x123), uint256(1 ether)));
+
+        vm.prank(address(0x123));
+        vm.expectRevert(abi.encodeWithSignature("InvalidHistoryHash()"));
+        oracle.reclaimBond(questionId, response, previousHashes);
+    }
 }

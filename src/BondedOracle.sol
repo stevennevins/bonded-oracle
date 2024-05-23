@@ -165,16 +165,15 @@ contract BondedOracle is IBondedOracle {
             revert NotFound();
         }
 
-        // Verify that the previousHashes compute to the current historyHash
         bytes32 recomputedHash = recomputeHistoryHash(previousHashes);
         if (recomputedHash != answer.historyHash) {
             revert InvalidHistoryHash();
         }
 
-        // Send the bond back to the msg.sender and mark their bond as claimed
-
         delete bonds[questionId][msg.sender];
-        payable(msg.sender).transfer(bond);
+        if (response == answer.response) {
+            payable(msg.sender).transfer(bond);
+        }
     }
 
     /// @inheritdoc IBondedOracle

@@ -27,7 +27,7 @@ The `BondedOracle` contract is a decentralized oracle system that leverages econ
 2. **Dispute Resolution**:
    - Community-driven resolution of disputes can be facilitated by the oracle. Users can request answers to questions related to the dispute, and the economic incentives ensure that the community provides fair and accurate resolutions.
 
-### Conclusion
+### TLDR
 
 The `BondedOracle` contract leverages economic game theory and intersubjectivity to create a decentralized system for providing reliable answers. By aligning the financial incentives of participants with the goal of accuracy, and relying on collective agreement, the contract ensures that the information provided is both trustworthy and secure. This makes it suitable for a wide range of applications, from prediction markets to data verification and dispute resolution.
 

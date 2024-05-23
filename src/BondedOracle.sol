@@ -5,11 +5,19 @@ pragma solidity ^0.8.20;
 import {IBondedOracle} from "./IBondedOracle.sol";
 
 contract BondedOracle is IBondedOracle {
+    /// @inheritdoc IBondedOracle
     uint256 public nextQuestionId;
+
+    /// @inheritdoc IBondedOracle
     mapping(uint256 => Question) public questions;
+
+    /// @inheritdoc IBondedOracle
     mapping(uint256 => Answer) public answers;
+
+    /// @inheritdoc IBondedOracle
     mapping(uint256 => mapping(address => uint256)) public claimedBonds;
 
+    /// @inheritdoc IBondedOracle
     function postQuestion(
         uint32 openingTime,
         uint32 expiry,
@@ -37,6 +45,7 @@ contract BondedOracle is IBondedOracle {
         return questionId;
     }
 
+    /// @inheritdoc IBondedOracle
     function cancelQuestion(uint256 questionId) external {
         Answer storage answer = answers[questionId];
         Question storage question = questions[questionId];
@@ -54,6 +63,7 @@ contract BondedOracle is IBondedOracle {
         payable(question.asker).transfer(question.bounty);
     }
 
+    /// @inheritdoc IBondedOracle
     function provideAnswer(uint256 questionId, bytes32 response) external payable {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];
@@ -87,6 +97,7 @@ contract BondedOracle is IBondedOracle {
         );
     }
 
+    /// @inheritdoc IBondedOracle
     function finalizeAnswer(uint256 questionId) external {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];
@@ -112,7 +123,9 @@ contract BondedOracle is IBondedOracle {
         }
     }
 
-    /// TODO: need to also add a fee for bonding an answer
+    ///  TODO: need to also add a fee for bonding an answer
+
+    /// @inheritdoc IBondedOracle
     function reclaimBond(uint256 questionId) external {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];
@@ -127,6 +140,7 @@ contract BondedOracle is IBondedOracle {
         /// TODO: assess answer for msg.sender, bonded value, and send back bond
     }
 
+    /// @inheritdoc IBondedOracle
     function withdrawBounty(uint256 questionId) external {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];

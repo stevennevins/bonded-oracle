@@ -4,6 +4,11 @@ pragma solidity ^0.8.20;
 
 import {IBondedOracle} from "./IBondedOracle.sol";
 
+/**
+ * @title BondedOracle
+ * @notice A decentralized oracle leveraging economic incentives for reliable and secure answers.
+ * @dev Implements bounty and bond mechanisms to align participant incentives with accurate information provision.
+ */
 contract BondedOracle is IBondedOracle {
     /// @inheritdoc IBondedOracle
     uint256 public nextQuestionId;

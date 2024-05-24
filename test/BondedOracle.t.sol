@@ -685,4 +685,149 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidHistoryHash()"));
         oracle.reclaimBond(questionId, response, previousHashes);
     }
+
+    function testSetObserver() public {
+        uint32 openingTime = uint32(block.timestamp + 1 days);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        address observer = address(0x789);
+
+        vm.prank(address(this));
+        oracle.setObserver(questionId, observer);
+
+        address storedObserver = oracle.observers(questionId);
+        assertEq(storedObserver, observer);
+    }
+
+    function testSetObserverNotAuthorized() public {
+        uint32 openingTime = uint32(block.timestamp + 1 days);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        address observer = address(0x789);
+
+        vm.prank(address(0x123));
+        vm.expectRevert(abi.encodeWithSignature("NotAuthorized()"));
+        oracle.setObserver(questionId, observer);
+    }
+
+    function testSetObserverQuestionDoesNotExist() public {
+        uint256 invalidQuestionId = 9999;
+        address observer = address(0x789);
+
+        vm.prank(address(this));
+        vm.expectRevert(abi.encodeWithSignature("QuestionDoesNotExist()"));
+        oracle.setObserver(invalidQuestionId, observer);
+    }
+
+    function testSetObserverOpeningTimeNotReached() public {
+        uint32 openingTime = uint32(block.timestamp + 1 days);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        address observer = address(0x789);
+
+        vm.prank(address(this));
+        oracle.setObserver(questionId, observer);
+    }
+
+    function testProvideAnswerWithObserver() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        address observer = address(0x789);
+        vm.prank(address(this));
+        oracle.setObserver(questionId, observer);
+
+        bytes32 response = keccak256("Paris");
+        vm.deal(observer, 100 ether);
+        vm.prank(observer);
+        oracle.provideAnswer{value: 1 ether}(questionId, response);
+
+        (bytes32 finalResponse, address responder, , ) = oracle.answers(questionId);
+        assertEq(finalResponse, response);
+        assertEq(responder, observer);
+    }
+
+    function testProvideAnswerWithObserverNotAuthorized() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        address observer = address(0x789);
+        vm.prank(address(this));
+        oracle.setObserver(questionId, observer);
+
+        bytes32 response = keccak256("Paris");
+        vm.deal(address(0x123), 100 ether);
+        vm.prank(address(0x123));
+        vm.expectRevert(abi.encodeWithSignature("NotAuthorized()"));
+        oracle.provideAnswer{value: 1 ether}(questionId, response);
+    }
+
+    function testProvideAnswerWithObserverBondTooLow() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            question
+        );
+
+        address observer = address(0x789);
+        vm.prank(address(this));
+        oracle.setObserver(questionId, observer);
+
+        bytes32 response = keccak256("Paris");
+        vm.deal(observer, 100 ether);
+        vm.prank(observer);
+        vm.expectRevert(abi.encodeWithSignature("BondTooLow()"));
+        oracle.provideAnswer{value: 0.5 ether}(questionId, response);
+    }
 }

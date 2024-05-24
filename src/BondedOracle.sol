@@ -31,7 +31,7 @@ contract BondedOracle is IBondedOracle {
         if (questionId >= nextQuestionId) {
             revert QuestionDoesNotExist();
         }
-        if (question.openingTime > block.timestamp) {
+        if (question.openingTime < block.timestamp) {
             revert ObserverNotAssignable();
         }
         if (question.asker != msg.sender) {

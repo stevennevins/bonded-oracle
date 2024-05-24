@@ -17,4 +17,5 @@ interface IBondedOracleEventsAndErrors {
     error BountyAlreadyClaimed();
     error NotFound();
     error InvalidHistoryHash();
+    error ObserverNotAssignable();
 }

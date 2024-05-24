@@ -12,10 +12,28 @@ contract BondedOracle is IBondedOracle {
     mapping(uint256 => Question) public questions;
 
     /// @inheritdoc IBondedOracle
+    mapping(uint256 => address) public observers;
+
+    /// @inheritdoc IBondedOracle
     mapping(uint256 => Answer) public answers;
 
     /// @inheritdoc IBondedOracle
     mapping(uint256 => mapping(address => uint256)) public bonds;
+
+    /// @inheritdoc IBondedOracle
+    function setObserver(uint256 questionId, address observer) external {
+        Question storage question = questions[questionId];
+        if (questionId >= nextQuestionId) {
+            revert QuestionDoesNotExist();
+        }
+        if (question.openingTime > block.timestamp) {
+            revert ObserverNotAssignable();
+        }
+        if (question.asker != msg.sender) {
+            revert NotAuthorized();
+        }
+        observers[questionId] = observer;
+    }
 
     /// @inheritdoc IBondedOracle
     function requestAnswer(
@@ -67,6 +85,11 @@ contract BondedOracle is IBondedOracle {
     function provideAnswer(uint256 questionId, bytes32 response) external payable {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];
+
+        address observer = observers[questionId];
+        if (observer != address(0) && msg.sender != observer) {
+            revert NotAuthorized();
+        }
 
         if (question.contentHash == 0) {
             revert QuestionDoesNotExist();

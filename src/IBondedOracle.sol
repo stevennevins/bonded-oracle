@@ -23,6 +23,8 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
 
     function nextQuestionId() external view returns (uint256);
 
+    function observers(uint256 questionId) external view returns (address);
+
     function questions(
         uint256 questionId
     )
@@ -45,6 +47,8 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
         returns (bytes32 response, address responder, uint256 finalizedTime, bytes32 historyHash);
 
     function bonds(uint256 questionId, address claimer) external view returns (uint256);
+
+    function setObserver(uint256 _questionId, address observer) external;
 
     function requestAnswer(
         uint32 openingTime,

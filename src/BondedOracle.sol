@@ -77,8 +77,9 @@ contract BondedOracle is IBondedOracle {
             revert NotAuthorized();
         }
         answer.finalizedTime = block.timestamp;
+        uint256 bounty = question.bounty;
         delete question.bounty;
-        payable(question.asker).transfer(question.bounty);
+        payable(question.asker).transfer(bounty);
     }
 
     /// @inheritdoc IBondedOracle

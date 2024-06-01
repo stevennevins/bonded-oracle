@@ -143,6 +143,13 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
         bytes32[] memory previousHashes
     ) external;
 
+    function slashBond(
+        uint256 questionId,
+        bytes32 response,
+        address responder,
+        bytes32[] memory previousHashes
+    ) external;
+
     /**
      * @notice Withdraws the bounty for a given question.
      * @dev The sender must be the responder of the finalized answer.

@@ -208,6 +208,51 @@ contract BondedOracle is IBondedOracle {
         }
     }
 
+    ///  TODO: need to also add a fee for bonding an answer
+    /// @inheritdoc IBondedOracle
+    function slashBond(
+        uint256 questionId,
+        bytes32 response,
+        address responder,
+        bytes32[] memory previousHashes
+    ) external {
+        Question storage question = questions[questionId];
+        Answer storage answer = answers[questionId];
+        uint256 bond = bonds[questionId][responder];
+
+        if (question.contentHash == 0) {
+            revert QuestionDoesNotExist();
+        }
+
+        if (answer.finalizedTime == 0) {
+            revert AnswerNotFinalized();
+        }
+
+        // Verify the responder's hashed data exists in the previousHashes list
+        bytes32 responderHash = keccak256(abi.encodePacked(response, responder, bond));
+        bool found = false;
+        for (uint256 i = 0; i < previousHashes.length; i++) {
+            if (previousHashes[i] == responderHash) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            revert NotFound();
+        }
+
+        bytes32 recomputedHash = recomputeHistoryHash(previousHashes);
+        if (recomputedHash != answer.historyHash) {
+            revert InvalidHistoryHash();
+        }
+
+        delete bonds[questionId][responder];
+        if (response != answer.response) {
+            Encumberable(question.slashableAsset).slash(responder, bond);
+        }
+    }
+
     /// @inheritdoc IBondedOracle
     function withdrawBounty(uint256 questionId) external {
         Question storage question = questions[questionId];

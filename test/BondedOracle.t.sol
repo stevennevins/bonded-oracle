@@ -892,4 +892,62 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         vm.expectRevert(abi.encodeWithSignature("BondTooLow()"));
         oracle.provideAnswer(questionId, response, 0.5e18);
     }
+
+    function testSlashBondForIncorrectAnswer() public {
+        uint32 openingTime = uint32(block.timestamp);
+        uint32 expiry = 30 days;
+        uint256 minBond = 1 ether;
+        string memory question = "What is the capital of France?";
+
+        uint256 questionId = oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            slashableAsset,
+            question
+        );
+
+        bytes32 correctResponse = keccak256(abi.encodePacked("Paris"));
+        bytes32 incorrectResponse = keccak256(abi.encodePacked("London"));
+
+        // Mint and approve tokens for responder1
+        address responder1 = address(0x123);
+        Encumberable(slashableAsset).mint(responder1, 100 ether);
+        vm.prank(responder1);
+        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+
+        // Mint and approve tokens for responder2
+        address responder2 = address(0x456);
+        Encumberable(slashableAsset).mint(responder2, 100 ether);
+        vm.prank(responder2);
+        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+
+        // Provide correct answer by responder1
+        vm.prank(responder1);
+        oracle.provideAnswer(questionId, incorrectResponse, 1e18);
+
+        // Provide incorrect answer by responder2
+        vm.prank(responder2);
+        oracle.provideAnswer(questionId, correctResponse, 2e18);
+
+        // Warp to after expiry
+        vm.warp(block.timestamp + expiry + 1);
+
+        // Finalize the answer
+        oracle.finalizeAnswer(questionId);
+
+        // Attempt to slash the bond for the incorrect answer
+        bytes32[] memory previousHashes = new bytes32[](2);
+        previousHashes[0] = keccak256(
+            abi.encodePacked(incorrectResponse, responder1, uint256(1e18))
+        );
+        previousHashes[1] = keccak256(abi.encodePacked(correctResponse, responder2, uint256(2e18)));
+
+        vm.prank(address(this));
+        oracle.slashBond(questionId, incorrectResponse, responder1, previousHashes);
+
+        // Check that the bond has been slashed
+        uint256 bondAfterSlash = oracle.bonds(questionId, responder1);
+        assertEq(bondAfterSlash, 0, "Bond should be slashed to zero");
+    }
 }

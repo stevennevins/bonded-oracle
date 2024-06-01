@@ -156,7 +156,7 @@ contract BondedOracle is IBondedOracle {
         if (answer.historyHash == bytes32(0)) {
             payable(question.asker).transfer(question.bounty);
         } else {
-            payable(answer.responder).transfer(question.bounty);
+            // payable(answer.responder).transfer(question.bounty);
         }
     }
 

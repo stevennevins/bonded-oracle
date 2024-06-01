@@ -3,15 +3,26 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {BondedOracle} from "../src/BondedOracle.sol";
+import {Encumberable} from "../src/EncumberedToken.sol";
 import {IBondedOracleEventsAndErrors} from "../src/IBondedOracleEventsAndErrors.sol";
 
 contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
-    BondedOracle oracle;
+    BondedOracle internal oracle;
+    address internal slashableAsset;
 
     receive() external payable {}
 
     function setUp() public {
         oracle = new BondedOracle();
+        slashableAsset = address(new Encumberable());
+        Encumberable(slashableAsset).mint(address(this), 100 ether);
+        Encumberable(slashableAsset).approve(address(oracle), type(uint256).max);
+        Encumberable(slashableAsset).mint(address(0x123), 100 ether);
+        vm.prank(address(0x123));
+        Encumberable(slashableAsset).approve(address(oracle), type(uint256).max);
+        Encumberable(slashableAsset).mint(address(0x456), 100 ether);
+        vm.prank(address(0x456));
+        Encumberable(slashableAsset).approve(address(oracle), type(uint256).max);
     }
 
     function testRequestAnswer() public {
@@ -24,6 +35,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -33,7 +45,8 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             bytes32 contentHash,
             uint256 storedExpiry,
             uint256 bounty,
-            uint256 storedMinBond
+            uint256 storedMinBond,
+            address slashableAsset
         ) = oracle.questions(questionId);
 
         assertEq(storedOpeningTime, openingTime);
@@ -51,7 +64,13 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         string memory question = "What is the capital of France?";
 
         vm.expectRevert(InvalidExpiry.selector);
-        oracle.requestAnswer{value: 1 ether}(openingTime, expiry, minBond, question);
+        oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            slashableAsset,
+            question
+        );
     }
 
     function testRequestAnswerInvalidExpiryTooLong() public {
@@ -61,7 +80,13 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         string memory question = "What is the capital of France?";
 
         vm.expectRevert(InvalidExpiry.selector);
-        oracle.requestAnswer{value: 1 ether}(openingTime, expiry, minBond, question);
+        oracle.requestAnswer{value: 1 ether}(
+            openingTime,
+            expiry,
+            minBond,
+            slashableAsset,
+            question
+        );
     }
 
     function testCancelRequest() public {
@@ -74,12 +99,13 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
         oracle.cancelRequest(questionId);
 
-        (, , , , uint256 bounty, ) = oracle.questions(questionId);
+        (, , , , uint256 bounty, , ) = oracle.questions(questionId);
         assertEq(bounty, 0);
     }
 
@@ -93,13 +119,14 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
         bytes32 response = keccak256("Paris");
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 2 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 2e18);
 
         vm.expectRevert(NotCancellable.selector);
         oracle.cancelRequest(questionId);
@@ -115,13 +142,14 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
         bytes32 response = keccak256("Paris");
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 2 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 2e18);
 
         vm.warp(block.timestamp + 31 days);
         oracle.finalizeAnswer(questionId);
@@ -147,13 +175,14 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
         bytes32 response = keccak256("Paris");
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 2 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 2e18);
 
         (bytes32 storedResponse, address responder, , ) = oracle.answers(questionId);
         assertEq(storedResponse, response);
@@ -167,7 +196,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
         vm.expectRevert(abi.encodeWithSignature("QuestionDoesNotExist()"));
-        oracle.provideAnswer{value: 2 ether}(nonExistentQuestionId, response);
+        oracle.provideAnswer(nonExistentQuestionId, response, 2e18);
     }
 
     function testProvideAnswerOpeningTimeNotReached() public {
@@ -180,6 +209,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -187,7 +217,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
         vm.expectRevert(abi.encodeWithSignature("OpeningTimeNotReached()"));
-        oracle.provideAnswer{value: 2 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 2e18);
     }
 
     function testProvideAnswerAnswerPeriodClosed() public {
@@ -200,6 +230,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -208,7 +239,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         vm.prank(address(0x123));
         vm.warp(block.timestamp + 31 days);
         vm.expectRevert(abi.encodeWithSignature("AnswerPeriodClosed()"));
-        oracle.provideAnswer{value: 2 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
     }
 
     function testProvideAnswerBondTooLow() public {
@@ -221,6 +252,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -228,7 +260,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
         vm.expectRevert(abi.encodeWithSignature("BondTooLow()"));
-        oracle.provideAnswer{value: 0.5 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 0.5e18);
     }
 
     function testProvideMultipleAnswers() public {
@@ -241,6 +273,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -249,11 +282,11 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response1);
+        oracle.provideAnswer(questionId, response1, 1e18);
 
         vm.deal(address(0x456), 100 ether);
         vm.prank(address(0x456));
-        oracle.provideAnswer{value: 2 ether}(questionId, response2);
+        oracle.provideAnswer(questionId, response2, 2e18);
 
         (bytes32 finalResponse, address responder, , ) = oracle.answers(questionId);
         assertEq(finalResponse, response2);
@@ -270,6 +303,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -277,7 +311,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
 
@@ -308,6 +342,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -315,7 +350,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
 
@@ -335,6 +370,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -342,7 +378,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.expectRevert(abi.encodeWithSignature("FinalizationDeadlineNotReached()"));
         oracle.finalizeAnswer(questionId);
@@ -358,6 +394,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -365,7 +402,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
 
@@ -390,6 +427,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -397,7 +435,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.prank(address(0x123));
         vm.expectRevert(abi.encodeWithSignature("FinalizationDeadlineNotReached()"));
@@ -414,6 +452,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -421,7 +460,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
 
@@ -442,6 +481,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -461,6 +501,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -468,7 +509,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
 
@@ -492,6 +533,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -499,7 +541,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
 
@@ -519,6 +561,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -527,11 +570,11 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response1);
+        oracle.provideAnswer(questionId, response1, 1e18);
 
         vm.deal(address(0x456), 100 ether);
         vm.prank(address(0x456));
-        oracle.provideAnswer{value: 2 ether}(questionId, response2);
+        oracle.provideAnswer(questionId, response2, 2e18);
 
         bytes32[] memory previousHashes = new bytes32[](2);
         previousHashes[0] = keccak256(
@@ -563,6 +606,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -570,7 +614,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
         oracle.finalizeAnswer(questionId);
@@ -602,6 +646,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -609,7 +654,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         bytes32[] memory previousHashes = new bytes32[](1);
         previousHashes[0] = keccak256(abi.encodePacked(response, address(0x123), uint256(1 ether)));
@@ -629,6 +674,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -636,7 +682,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.warp(block.timestamp + expiry + 1);
         oracle.finalizeAnswer(questionId);
@@ -659,6 +705,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -666,11 +713,13 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         vm.deal(address(0x124), 100 ether);
         vm.prank(address(0x124));
-        oracle.provideAnswer{value: 2 ether}(questionId, response);
+        Encumberable(slashableAsset).mint(address(124), 100 ether);
+        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        oracle.provideAnswer(questionId, response, 2e18);
 
         vm.warp(block.timestamp + expiry + 1);
         oracle.finalizeAnswer(questionId);
@@ -696,6 +745,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -718,6 +768,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -747,6 +798,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -766,17 +818,23 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
         address observer = address(0x789);
+        Encumberable(slashableAsset).mint(observer, 100 ether);
+        vm.prank(observer);
+        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
         vm.prank(address(this));
         oracle.setObserver(questionId, observer);
 
         bytes32 response = keccak256("Paris");
-        vm.deal(observer, 100 ether);
+        Encumberable(slashableAsset).mint(observer, 100 ether);
         vm.prank(observer);
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        vm.prank(observer);
+        oracle.provideAnswer(questionId, response, 1e18);
 
         (bytes32 finalResponse, address responder, , ) = oracle.answers(questionId);
         assertEq(finalResponse, response);
@@ -793,6 +851,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
@@ -801,10 +860,10 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         oracle.setObserver(questionId, observer);
 
         bytes32 response = keccak256("Paris");
-        vm.deal(address(0x123), 100 ether);
+        Encumberable(slashableAsset).mint(address(0x123), 100 ether);
         vm.prank(address(0x123));
         vm.expectRevert(abi.encodeWithSignature("NotAuthorized()"));
-        oracle.provideAnswer{value: 1 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 1e18);
     }
 
     function testProvideAnswerWithObserverBondTooLow() public {
@@ -817,17 +876,20 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
             openingTime,
             expiry,
             minBond,
+            slashableAsset,
             question
         );
 
         address observer = address(0x789);
+        Encumberable(slashableAsset).mint(observer, 100 ether);
+        vm.prank(observer);
+        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
         vm.prank(address(this));
         oracle.setObserver(questionId, observer);
 
         bytes32 response = keccak256("Paris");
-        vm.deal(observer, 100 ether);
         vm.prank(observer);
         vm.expectRevert(abi.encodeWithSignature("BondTooLow()"));
-        oracle.provideAnswer{value: 0.5 ether}(questionId, response);
+        oracle.provideAnswer(questionId, response, 0.5e18);
     }
 }

@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import {IBondedOracle} from "./IBondedOracle.sol";
+import {Encumberable} from "./EncumberedToken.sol";
 
 /**
  * @title BondedOracle
@@ -45,6 +46,7 @@ contract BondedOracle is IBondedOracle {
         uint32 openingTime,
         uint32 expiry,
         uint256 minBond,
+        address slashableAsset,
         string memory question
     ) external payable returns (uint256) {
         if (expiry == 0 || expiry > 365 days) {
@@ -60,7 +62,8 @@ contract BondedOracle is IBondedOracle {
             contentHash: contentHash,
             expiry: expiry,
             bounty: msg.value,
-            minBond: minBond
+            minBond: minBond,
+            slashableAsset: slashableAsset
         });
 
         nextQuestionId++;
@@ -88,7 +91,7 @@ contract BondedOracle is IBondedOracle {
     }
 
     /// @inheritdoc IBondedOracle
-    function provideAnswer(uint256 questionId, bytes32 response) external payable {
+    function provideAnswer(uint256 questionId, bytes32 response, uint256 bond) external {
         Question storage question = questions[questionId];
         Answer storage answer = answers[questionId];
 
@@ -112,9 +115,10 @@ contract BondedOracle is IBondedOracle {
         if (block.timestamp + 1 minutes > question.openingTime + question.expiry) {
             question.expiry += 5 minutes; // extend if answering right before end
         }
+        Encumberable(question.slashableAsset).encumberFrom(msg.sender, address(this), bond);
 
         uint256 currentBond = bonds[questionId][msg.sender];
-        uint256 newBond = currentBond += msg.value;
+        uint256 newBond = currentBond + bond;
 
         if (newBond < question.minBond) {
             revert BondTooLow();
@@ -156,7 +160,7 @@ contract BondedOracle is IBondedOracle {
         if (answer.historyHash == bytes32(0)) {
             payable(question.asker).transfer(question.bounty);
         } else {
-            payable(answer.responder).transfer(question.bounty);
+            // payable(answer.responder).transfer(question.bounty);
         }
     }
 
@@ -200,7 +204,7 @@ contract BondedOracle is IBondedOracle {
 
         delete bonds[questionId][msg.sender];
         if (response == answer.response) {
-            payable(msg.sender).transfer(bond);
+            Encumberable(question.slashableAsset).release(msg.sender, bond);
         }
     }
 
@@ -224,7 +228,9 @@ contract BondedOracle is IBondedOracle {
             revert BountyAlreadyClaimed();
         }
         delete question.bounty;
-        payable(msg.sender).transfer(amount);
+        if (amount > 0) {
+            payable(msg.sender).transfer(amount);
+        }
     }
 
     function recomputeHistoryHash(bytes32[] memory previousHashes) public pure returns (bytes32) {

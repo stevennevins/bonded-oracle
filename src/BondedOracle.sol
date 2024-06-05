@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import {IBondedOracle} from "./IBondedOracle.sol";
-import {Encumberable} from "./EncumberedToken.sol";
+import {EncumberedToken} from "./EncumberedToken.sol";
 
 /**
  * @title BondedOracle
@@ -115,7 +115,7 @@ contract BondedOracle is IBondedOracle {
         if (block.timestamp + 1 minutes > question.openingTime + question.expiry) {
             question.expiry += 5 minutes; // extend if answering right before end
         }
-        Encumberable(question.slashableAsset).encumberFrom(msg.sender, address(this), bond);
+        EncumberedToken(question.slashableAsset).encumberFrom(msg.sender, address(this), bond);
 
         uint256 currentBond = bonds[questionId][msg.sender];
         uint256 newBond = currentBond + bond;
@@ -204,7 +204,7 @@ contract BondedOracle is IBondedOracle {
 
         delete bonds[questionId][msg.sender];
         if (response == answer.response) {
-            Encumberable(question.slashableAsset).release(msg.sender, bond);
+            EncumberedToken(question.slashableAsset).release(msg.sender, bond);
         }
     }
 
@@ -249,7 +249,7 @@ contract BondedOracle is IBondedOracle {
 
         delete bonds[questionId][responder];
         if (response != answer.response) {
-            Encumberable(question.slashableAsset).slash(responder, bond);
+            EncumberedToken(question.slashableAsset).slash(responder, bond);
         }
     }
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {BondedOracle} from "../src/BondedOracle.sol";
-import {Encumberable} from "../src/EncumberedToken.sol";
+import {EncumberedToken} from "../src/EncumberedToken.sol";
 import {IBondedOracleEventsAndErrors} from "../src/IBondedOracleEventsAndErrors.sol";
 
 contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
@@ -14,15 +14,15 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
     function setUp() public {
         oracle = new BondedOracle();
-        slashableAsset = address(new Encumberable());
-        Encumberable(slashableAsset).mint(address(this), 100 ether);
-        Encumberable(slashableAsset).approve(address(oracle), type(uint256).max);
-        Encumberable(slashableAsset).mint(address(0x123), 100 ether);
+        slashableAsset = address(new EncumberedToken());
+        EncumberedToken(slashableAsset).mint(address(this), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), type(uint256).max);
+        EncumberedToken(slashableAsset).mint(address(0x123), 100 ether);
         vm.prank(address(0x123));
-        Encumberable(slashableAsset).approve(address(oracle), type(uint256).max);
-        Encumberable(slashableAsset).mint(address(0x456), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), type(uint256).max);
+        EncumberedToken(slashableAsset).mint(address(0x456), 100 ether);
         vm.prank(address(0x456));
-        Encumberable(slashableAsset).approve(address(oracle), type(uint256).max);
+        EncumberedToken(slashableAsset).approve(address(oracle), type(uint256).max);
     }
 
     function testRequestAnswer() public {
@@ -717,8 +717,8 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         vm.deal(address(0x124), 100 ether);
         vm.prank(address(0x124));
-        Encumberable(slashableAsset).mint(address(124), 100 ether);
-        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        EncumberedToken(slashableAsset).mint(address(124), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), 100 ether);
         oracle.provideAnswer(questionId, response, 2e18);
 
         vm.warp(block.timestamp + expiry + 1);
@@ -823,16 +823,16 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         );
 
         address observer = address(0x789);
-        Encumberable(slashableAsset).mint(observer, 100 ether);
+        EncumberedToken(slashableAsset).mint(observer, 100 ether);
         vm.prank(observer);
-        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), 100 ether);
         vm.prank(address(this));
         oracle.setObserver(questionId, observer);
 
         bytes32 response = keccak256("Paris");
-        Encumberable(slashableAsset).mint(observer, 100 ether);
+        EncumberedToken(slashableAsset).mint(observer, 100 ether);
         vm.prank(observer);
-        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), 100 ether);
         vm.prank(observer);
         oracle.provideAnswer(questionId, response, 1e18);
 
@@ -860,7 +860,7 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         oracle.setObserver(questionId, observer);
 
         bytes32 response = keccak256("Paris");
-        Encumberable(slashableAsset).mint(address(0x123), 100 ether);
+        EncumberedToken(slashableAsset).mint(address(0x123), 100 ether);
         vm.prank(address(0x123));
         vm.expectRevert(abi.encodeWithSignature("NotAuthorized()"));
         oracle.provideAnswer(questionId, response, 1e18);
@@ -881,9 +881,9 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
         );
 
         address observer = address(0x789);
-        Encumberable(slashableAsset).mint(observer, 100 ether);
+        EncumberedToken(slashableAsset).mint(observer, 100 ether);
         vm.prank(observer);
-        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), 100 ether);
         vm.prank(address(this));
         oracle.setObserver(questionId, observer);
 
@@ -912,15 +912,15 @@ contract BondedOracleTest is IBondedOracleEventsAndErrors, Test {
 
         // Mint and approve tokens for responder1
         address responder1 = address(0x123);
-        Encumberable(slashableAsset).mint(responder1, 100 ether);
+        EncumberedToken(slashableAsset).mint(responder1, 100 ether);
         vm.prank(responder1);
-        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), 100 ether);
 
         // Mint and approve tokens for responder2
         address responder2 = address(0x456);
-        Encumberable(slashableAsset).mint(responder2, 100 ether);
+        EncumberedToken(slashableAsset).mint(responder2, 100 ether);
         vm.prank(responder2);
-        Encumberable(slashableAsset).approve(address(oracle), 100 ether);
+        EncumberedToken(slashableAsset).approve(address(oracle), 100 ether);
 
         // Provide correct answer by responder1
         vm.prank(responder1);

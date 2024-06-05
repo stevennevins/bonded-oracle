@@ -21,6 +21,7 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
         uint256 expiry;
         uint256 bounty;
         uint256 minBond;
+        address slashableAsset;
     }
 
     /**
@@ -62,7 +63,7 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
      */
     function questions(
         uint256 questionId
-    ) external view returns (uint256, address, bytes32, uint256, uint256, uint256);
+    ) external view returns (uint256, address, bytes32, uint256, uint256, uint256, address);
 
     /**
      * @notice Returns the details of an answer for a given question ID.
@@ -103,6 +104,7 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
         uint32 openingTime,
         uint32 expiry,
         uint256 minBond,
+        address slashableAsset,
         string memory question
     ) external payable returns (uint256);
 
@@ -119,7 +121,7 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
      * @param questionId The ID of the question to be answered.
      * @param response The response to the question.
      */
-    function provideAnswer(uint256 questionId, bytes32 response) external payable;
+    function provideAnswer(uint256 questionId, bytes32 response, uint256 bond) external;
 
     /**
      * @notice Finalizes the answer for a given question.
@@ -138,6 +140,13 @@ interface IBondedOracle is IBondedOracleEventsAndErrors {
     function reclaimBond(
         uint256 questionId,
         bytes32 response,
+        bytes32[] memory previousHashes
+    ) external;
+
+    function slashBond(
+        uint256 questionId,
+        bytes32 response,
+        address responder,
         bytes32[] memory previousHashes
     ) external;
 
